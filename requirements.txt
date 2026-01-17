@@ -1,0 +1,32 @@
+# AI 硬笔书法批改系统依赖
+
+# 深度学习框架
+torch>=2.0.0
+torchvision>=0.15.0
+
+# PaddlePaddle & PaddleOCR
+paddlepaddle-gpu>=2.5.0
+paddleocr>=2.8
+
+# 计算机视觉
+opencv-python>=4.8.0
+scikit-image>=0.21.0
+
+# 目标检测
+ultralytics>=8.0.0
+
+# 图神经网络
+torch_geometric>=2.4.0
+torch_scatter
+torch_sparse
+
+# Web 框架
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
+
+# 工具库
+numpy>=1.24.0
+scipy>=1.10.0
+pyyaml>=6.0
+pillow>=10.0.0
