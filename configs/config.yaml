@@ -1,0 +1,60 @@
+# AI Calligraphy Grading System Configuration
+
+# Path Configuration
+paths:
+  # Data directories
+  data_root: "data"
+  templates: "data/templates"
+  datasets: "data/datasets"
+  student_samples: "data/student_samples"
+  annotations: "data/annotations"
+  
+  # Model directories
+  pretrained_models: "models/pretrained"
+  trained_models: "models/trained"
+  
+  # Output directories
+  outputs: "outputs"
+  results: "outputs/results"
+  visualizations: "outputs/visualizations"
+
+# Image Preprocessing Configuration
+preprocess:
+  target_size: [256, 256]
+  binary_threshold: 127
+  denoise_kernel: 3
+
+# Text Detection Configuration
+detection:
+  model: "paddleocr"
+  conf_threshold: 0.5
+  iou_threshold: 0.45
+
+# Text Recognition Configuration
+recognition:
+  model: "paddleocr"
+  lang: "ch"
+
+# Stroke Feature Extraction Configuration
+extraction:
+  skeleton_method: "zhang_suen"
+  min_stroke_length: 5
+
+# Scoring Configuration
+scoring:
+  weights:
+    center_of_mass: 0.25
+    stroke_accuracy: 0.40
+    structure: 0.35
+  
+  thresholds:
+    excellent: 90
+    good: 75
+    medium: 60
+    pass: 45
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  max_file_size: 10485760

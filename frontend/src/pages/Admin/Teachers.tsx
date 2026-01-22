@@ -11,7 +11,9 @@ import {
     message,
     Tag,
     Popconfirm,
-    Typography
+    Typography,
+    Tooltip,
+    Badge
 } from 'antd'
 import {
     PlusOutlined,
@@ -19,7 +21,12 @@ import {
     DeleteOutlined,
     UserOutlined,
     PhoneOutlined,
-    MailOutlined
+    MailOutlined,
+    CheckCircleOutlined,
+    StopOutlined,
+    ExclamationCircleOutlined,
+    UnlockOutlined,
+    LockOutlined
 } from '@ant-design/icons'
 import axios from 'axios'
 
@@ -33,8 +40,10 @@ interface Teacher {
     employee_no: string
     phone: string
     email: string
-    subject: string
+    subjects: string
     status: string
+    is_active: boolean
+    can_edit: boolean
     class_count: number
 }
 
@@ -80,7 +89,8 @@ const Teachers: React.FC = () => {
             employee_no: record.employee_no,
             phone: record.phone,
             email: record.email,
-            subject: record.subject
+            subjects: record.subjects,
+            status: record.status || 'active'
         })
         setModalVisible(true)
     }
@@ -124,14 +134,73 @@ const Teachers: React.FC = () => {
         }
     }
 
+    // 授权教师
+    const handleAuthorize = async (id: number) => {
+        try {
+            const token = localStorage.getItem('token')
+            await axios.post(`/api/admin/teachers/${id}/authorize`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            message.success('教师已授权')
+            fetchTeachers()
+        } catch (error: any) {
+            message.error('授权失败: ' + (error.response?.data?.detail || error.message))
+        }
+    }
+
+    // 禁用教师
+    const handleDisable = async (id: number) => {
+        try {
+            const token = localStorage.getItem('token')
+            await axios.post(`/api/admin/teachers/${id}/disable`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            message.success('教师已禁用')
+            fetchTeachers()
+        } catch (error: any) {
+            message.error('禁用失败: ' + (error.response?.data?.detail || error.message))
+        }
+    }
+
+    // 授权教师编辑权限
+    const handleGrantEdit = async (id: number) => {
+        try {
+            const token = localStorage.getItem('token')
+            await axios.post(`/api/admin/teachers/${id}/grant-edit`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            message.success('已授权教师数据编辑权限')
+            fetchTeachers()
+        } catch (error: any) {
+            message.error('授权失败: ' + (error.response?.data?.detail || error.message))
+        }
+    }
+
+    // 取消教师编辑权限
+    const handleRevokeEdit = async (id: number) => {
+        try {
+            const token = localStorage.getItem('token')
+            await axios.post(`/api/admin/teachers/${id}/revoke-edit`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            message.success('已取消教师数据编辑权限')
+            fetchTeachers()
+        } catch (error: any) {
+            message.error('取消授权失败: ' + (error.response?.data?.detail || error.message))
+        }
+    }
+
     const columns = [
         {
             title: '教师姓名',
             dataIndex: 'name',
             key: 'name',
-            render: (text: string) => (
+            render: (text: string, record: Teacher) => (
                 <Space>
-                    <UserOutlined />
+                    <Badge
+                        status={record.is_active ? 'success' : 'error'}
+                        text={<UserOutlined />}
+                    />
                     {text}
                 </Space>
             )
@@ -165,8 +234,8 @@ const Teachers: React.FC = () => {
         },
         {
             title: '任教科目',
-            dataIndex: 'subject',
-            key: 'subject',
+            dataIndex: 'subjects',
+            key: 'subjects',
             render: (text: string) => text ? <Tag color="blue">{text}</Tag> : '-'
         },
         {
@@ -176,21 +245,100 @@ const Teachers: React.FC = () => {
             render: (count: number) => <Tag color="green">{count || 0} 个</Tag>
         },
         {
-            title: '状态',
-            dataIndex: 'status',
-            key: 'status',
-            render: (status: string) => (
-                <Tag color={status === 'active' ? 'success' : 'default'}>
-                    {status === 'active' ? '在职' : '离职'}
-                </Tag>
+            title: '授权状态',
+            dataIndex: 'is_active',
+            key: 'is_active',
+            render: (isActive: boolean) => (
+                isActive ? (
+                    <Tag color="success" icon={<CheckCircleOutlined />}>已授权</Tag>
+                ) : (
+                    <Tag color="warning" icon={<ExclamationCircleOutlined />}>待授权</Tag>
+                )
+            )
+        },
+        {
+            title: '编辑权限',
+            dataIndex: 'can_edit',
+            key: 'can_edit',
+            render: (canEdit: boolean, record: Teacher) => (
+                record.is_active ? (
+                    canEdit ? (
+                        <Tag color="success" icon={<UnlockOutlined />}>可编辑</Tag>
+                    ) : (
+                        <Tag color="default" icon={<LockOutlined />}>只读</Tag>
+                    )
+                ) : (
+                    <Tag color="default">-</Tag>
+                )
             )
         },
         {
             title: '操作',
             key: 'actions',
-            width: 200,
+            width: 360,
             render: (_: any, record: Teacher) => (
                 <Space>
+                    {record.is_active ? (
+                        <Popconfirm
+                            title="确定要禁用该教师账号吗？"
+                            description="禁用后该教师将无法登录系统"
+                            onConfirm={() => handleDisable(record.id)}
+                            okText="确定"
+                            cancelText="取消"
+                        >
+                            <Tooltip title="禁用账号">
+                                <Button type="link" danger icon={<StopOutlined />}>
+                                    禁用
+                                </Button>
+                            </Tooltip>
+                        </Popconfirm>
+                    ) : (
+                        <Popconfirm
+                            title="确定要授权该教师吗？"
+                            description="授权后该教师将可以登录系统"
+                            onConfirm={() => handleAuthorize(record.id)}
+                            okText="确定"
+                            cancelText="取消"
+                        >
+                            <Tooltip title="授权账号">
+                                <Button type="link" style={{ color: '#52c41a' }} icon={<CheckCircleOutlined />}>
+                                    授权
+                                </Button>
+                            </Tooltip>
+                        </Popconfirm>
+                    )}
+                    {/* 编辑权限控制 - 只有已授权的教师才显示 */}
+                    {record.is_active && (
+                        record.can_edit ? (
+                            <Popconfirm
+                                title="确定要取消该教师的编辑权限吗？"
+                                description="取消后该教师将无法进行数据录入和评语管理"
+                                onConfirm={() => handleRevokeEdit(record.id)}
+                                okText="确定"
+                                cancelText="取消"
+                            >
+                                <Tooltip title="取消编辑权限">
+                                    <Button type="link" icon={<LockOutlined />} style={{ color: '#faad14' }}>
+                                        禁止编辑
+                                    </Button>
+                                </Tooltip>
+                            </Popconfirm>
+                        ) : (
+                            <Popconfirm
+                                title="确定要授权该教师编辑权限吗？"
+                                description="授权后该教师可以进行数据录入和评语管理"
+                                onConfirm={() => handleGrantEdit(record.id)}
+                                okText="确定"
+                                cancelText="取消"
+                            >
+                                <Tooltip title="授权编辑权限">
+                                    <Button type="link" icon={<UnlockOutlined />} style={{ color: '#1890ff' }}>
+                                        允许编辑
+                                    </Button>
+                                </Tooltip>
+                            </Popconfirm>
+                        )
+                    )}
                     <Button
                         type="link"
                         icon={<EditOutlined />}
@@ -213,6 +361,9 @@ const Teachers: React.FC = () => {
         }
     ]
 
+    // 统计待授权数量
+    const pendingCount = teachers.filter(t => !t.is_active).length
+
     return (
         <div style={{ padding: 24 }}>
             <Card
@@ -220,6 +371,9 @@ const Teachers: React.FC = () => {
                     <Space>
                         <UserOutlined />
                         <Title level={4} style={{ margin: 0 }}>教师管理</Title>
+                        {pendingCount > 0 && (
+                            <Tag color="orange">{pendingCount} 人待授权</Tag>
+                        )}
                     </Space>
                 }
                 extra={
@@ -234,6 +388,7 @@ const Teachers: React.FC = () => {
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 10 }}
+                    rowClassName={(record) => !record.is_active ? 'pending-row' : ''}
                 />
             </Card>
 
@@ -281,7 +436,7 @@ const Teachers: React.FC = () => {
                         <Input placeholder="请输入邮箱" />
                     </Form.Item>
                     <Form.Item
-                        name="subject"
+                        name="subjects"
                         label="任教科目"
                     >
                         <Select placeholder="请选择任教科目" allowClear>
@@ -293,10 +448,20 @@ const Teachers: React.FC = () => {
                             <Option value="美术">美术</Option>
                             <Option value="科学">科学</Option>
                             <Option value="品德">品德</Option>
+                            <Option value="信息技术">信息技术</Option>
                         </Select>
                     </Form.Item>
                 </Form>
             </Modal>
+
+            <style>{`
+                .pending-row {
+                    background-color: #fffbe6;
+                }
+                .pending-row:hover > td {
+                    background-color: #fff7cc !important;
+                }
+            `}</style>
         </div>
     )
 }

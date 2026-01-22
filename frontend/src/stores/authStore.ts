@@ -20,11 +20,23 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null,
       user: null,
-      setAuth: (token, user) => set({ token, user }),
-      logout: () => set({ token: null, user: null }),
+      setAuth: (token, user) => {
+        localStorage.setItem('token', token)
+        set({ token, user })
+      },
+      logout: () => {
+        localStorage.removeItem('token')
+        set({ token: null, user: null })
+      },
     }),
     {
       name: 'auth-storage',
+      onRehydrateStorage: () => (state) => {
+        // 当从持久化存储恢复时，同步token到localStorage
+        if (state?.token) {
+          localStorage.setItem('token', state.token)
+        }
+      },
     }
   )
 )

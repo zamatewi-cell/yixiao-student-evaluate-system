@@ -1,0 +1,8 @@
+API-Key:sk-64b7fb2c08b44369981491e4c65b03f6
+默认管理员账户：
+用户名：admin
+密码：admin123
+
+前端界面：http://localhost:3000 (点击工具面板的预览按钮查看)
+后端API：http://localhost:8000
+学生查询页面：http://localhost:3000/student (无需登录)

@@ -1,5 +1,5 @@
 import { useState, ReactNode } from 'react'
-import { Layout, Menu, Button, Dropdown, Avatar, Space } from 'antd'
+import { Layout, Menu, Button, Dropdown, Avatar, Space, Tag } from 'antd'
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -13,6 +13,7 @@ import {
   SettingOutlined,
   CommentOutlined,
   EditOutlined,
+  LinkOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
@@ -32,76 +33,180 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const isAdmin = user?.role === 'admin'
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin'
 
-  const menuItems = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: '仪表盘',
-    },
-    ...(isAdmin ? [
+  // 根据角色生成菜单项
+  const getMenuItems = () => {
+    // 教师菜单（简洁版）
+    if (user?.role === 'teacher') {
+      return [
+        {
+          key: '/dashboard',
+          icon: <DashboardOutlined />,
+          label: '工作台',
+        },
+        {
+          key: '/attendance',
+          icon: <CalendarOutlined />,
+          label: '考勤管理',
+        },
+        {
+          key: '/score-entry',
+          icon: <FormOutlined />,
+          label: '成绩录入',
+        },
+        {
+          key: '/wrong-answer',
+          icon: <FormOutlined />,
+          label: '错题分析',
+        },
+        {
+          key: '/data-entry',
+          icon: <FormOutlined />,
+          label: '素质评价',
+        },
+        {
+          key: '/comment-management',
+          icon: <CommentOutlined />,
+          label: '评语管理',
+        },
+        {
+          key: '/calligraphy',
+          icon: <EditOutlined />,
+          label: '书法批改',
+        },
+        {
+          key: '/calligraphy-assignment',
+          icon: <LinkOutlined />,
+          label: '作品分配',
+        },
+      ]
+    }
+
+    // 管理员菜单（完整版）
+    return [
       {
-        key: 'admin-group',
-        icon: <SettingOutlined />,
-        label: '系统管理',
-        children: [
-          {
-            key: '/semesters',
-            icon: <CalendarOutlined />,
-            label: '学期管理',
-          },
-          {
-            key: '/classes',
-            icon: <TeamOutlined />,
-            label: '班级管理',
-          },
-          {
-            key: '/students',
-            icon: <UserOutlined />,
-            label: '学生管理',
-          },
-          {
-            key: '/teachers',
-            icon: <TeamOutlined />,
-            label: '教师管理',
-          },
-          {
-            key: '/indicators',
-            icon: <SettingOutlined />,
-            label: '评价指标',
-          },
-        ]
+        key: '/dashboard',
+        icon: <DashboardOutlined />,
+        label: '仪表盘',
       },
-      {
-        key: '/statistics',
-        icon: <BarChartOutlined />,
-        label: '统计报表',
-      },
-    ] : []),
-    ...(isTeacher ? [
-      {
-        key: 'teacher-group',
-        icon: <FormOutlined />,
-        label: '教师功能',
-        children: [
-          {
-            key: '/data-entry',
-            icon: <FormOutlined />,
-            label: '数据录入',
-          },
-          {
-            key: '/comment-management',
-            icon: <CommentOutlined />,
-            label: '评语管理',
-          },
-          {
-            key: '/calligraphy',
-            icon: <EditOutlined />,
-            label: '书法批改',
-          },
-        ]
-      },
-    ] : []),
-  ]
+      ...(isAdmin ? [
+        {
+          key: 'admin-group',
+          icon: <SettingOutlined />,
+          label: '系统管理',
+          children: [
+            {
+              key: '/semesters',
+              icon: <CalendarOutlined />,
+              label: '学期管理',
+            },
+            {
+              key: '/classes',
+              icon: <TeamOutlined />,
+              label: '班级管理',
+            },
+            {
+              key: '/students',
+              icon: <UserOutlined />,
+              label: '学生管理',
+            },
+            {
+              key: '/teachers',
+              icon: <TeamOutlined />,
+              label: '教师管理',
+            },
+            {
+              key: '/teacher-roles',
+              icon: <SettingOutlined />,
+              label: '权限管理',
+            },
+            {
+              key: '/indicators',
+              icon: <SettingOutlined />,
+              label: '评价指标',
+            },
+            {
+              key: '/exam-management',
+              icon: <FormOutlined />,
+              label: '考试管理',
+            },
+          ]
+        },
+        {
+          key: '/statistics',
+          icon: <BarChartOutlined />,
+          label: '统计报表',
+        },
+        {
+          key: 'system-group',
+          icon: <SettingOutlined />,
+          label: '系统工具',
+          children: [
+            {
+              key: '/notices',
+              icon: <SettingOutlined />,
+              label: '通知公告',
+            },
+            {
+              key: '/audit-logs',
+              icon: <SettingOutlined />,
+              label: '操作日志',
+            },
+            {
+              key: '/system-settings',
+              icon: <SettingOutlined />,
+              label: '系统设置',
+            },
+          ]
+        },
+      ] : []),
+      ...(isTeacher ? [
+        {
+          key: 'teacher-group',
+          icon: <FormOutlined />,
+          label: '教师功能',
+          children: [
+            {
+              key: '/attendance',
+              icon: <CalendarOutlined />,
+              label: '考勤管理',
+            },
+            {
+              key: '/score-entry',
+              icon: <FormOutlined />,
+              label: '成绩录入',
+            },
+            {
+              key: '/wrong-answer',
+              icon: <FormOutlined />,
+              label: '错题分析',
+            },
+            {
+              key: '/data-entry',
+              icon: <FormOutlined />,
+              label: '素质评价',
+            },
+            {
+              key: '/comment-management',
+              icon: <CommentOutlined />,
+              label: '评语管理',
+            },
+            {
+              key: '/calligraphy',
+              icon: <EditOutlined />,
+              label: '书法批改',
+            },
+            {
+              key: '/calligraphy-assignment',
+              icon: <LinkOutlined />,
+              label: '作品分配',
+            },
+          ]
+        },
+      ] : []),
+    ]
+  }
+
+  const menuItems = getMenuItems()
 
   const handleMenuClick = ({ key }: { key: string }) => {
     if (!key.includes('-group')) {
@@ -118,7 +223,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: '个人信息',
+      label: '个人资料',
+      onClick: () => navigate('/profile'),
     },
     {
       key: 'logout',
@@ -127,6 +233,24 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       onClick: handleLogout,
     },
   ]
+
+  // 获取角色标签
+  const getRoleTag = () => {
+    if (user?.role === 'admin') {
+      return <Tag color="red">管理员</Tag>
+    } else if (user?.role === 'teacher') {
+      return <Tag color="blue">教师</Tag>
+    }
+    return null
+  }
+
+  // 获取系统标题
+  const getSystemTitle = () => {
+    if (user?.role === 'teacher') {
+      return collapsed ? '教师' : '教师工作台'
+    }
+    return collapsed ? '评价' : '学生综合素质评价'
+  }
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -152,7 +276,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            {collapsed ? '评价' : '学生综合素质评价'}
+            {getSystemTitle()}
           </h2>
         </div>
         <Menu
@@ -173,14 +297,17 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           justifyContent: 'space-between',
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
         }}>
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-          />
+          <Space>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+            />
+            {getRoleTag()}
+          </Space>
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
-              <Avatar style={{ backgroundColor: '#667eea' }}>
+              <Avatar style={{ backgroundColor: user?.role === 'admin' ? '#ff4d4f' : '#667eea' }}>
                 {user?.real_name?.[0] || user?.username?.[0] || 'U'}
               </Avatar>
               <span>{user?.real_name || user?.username}</span>

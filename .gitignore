@@ -4,3 +4,17 @@
 node_modules/
 __pycache__/
 *.pyc
+.env
+*.log
+dist/
+build/
+.cache/
+*.timestamp-*
+tables_output.txt
+
+# 大文件夹（非核心代码）
+data/
+uploads/
+outputs/
+models/
+*.zip

@@ -39,6 +39,16 @@ export const authApi = {
   getMe: () => api.get('/auth/me'),
   changePassword: (oldPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { old_password: oldPassword, new_password: newPassword }),
+  // 教师注册
+  registerTeacher: (data: {
+    username: string
+    password: string
+    real_name: string
+    gender?: string
+    phone?: string
+    email?: string
+    subjects?: string
+  }) => api.post('/auth/register/teacher', data),
 }
 
 // Admin API
@@ -48,32 +58,43 @@ export const adminApi = {
   createUser: (data: any) => api.post('/admin/users', data),
   updateUser: (id: number, data: any) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
-  
+
   // Semesters
   getSemesters: () => api.get('/admin/semesters'),
   createSemester: (data: any) => api.post('/admin/semesters', data),
+  updateSemester: (id: number, data: any) => api.put(`/admin/semesters/${id}`, data),
+  deleteSemester: (id: number) => api.delete(`/admin/semesters/${id}`),
   setCurrentSemester: (id: number) => api.put(`/admin/semesters/${id}/set-current`),
-  
+
   // Grades
   getGrades: () => api.get('/admin/grades'),
-  
+
   // Classes
   getClasses: (gradeId?: number) => api.get('/admin/classes', { params: { grade_id: gradeId } }),
   createClass: (data: any) => api.post('/admin/classes', data),
-  
+  updateClass: (id: number, data: any) => api.put(`/admin/classes/${id}`, data),
+  deleteClass: (id: number) => api.delete(`/admin/classes/${id}`),
+
   // Students
   getStudents: (params?: any) => api.get('/admin/students', { params }),
   createStudent: (data: any) => api.post('/admin/students', data),
+  updateStudent: (id: number, data: any) => api.put(`/admin/students/${id}`, data),
+  deleteStudent: (id: number) => api.delete(`/admin/students/${id}`),
   getStudentBarcode: (id: number) => api.get(`/admin/students/${id}/barcode`),
-  
+
   // Teachers
   getTeachers: () => api.get('/admin/teachers'),
   createTeacher: (data: any) => api.post('/admin/teachers', data),
-  
+  updateTeacher: (id: number, data: any) => api.put(`/admin/teachers/${id}`, data),
+  deleteTeacher: (id: number) => api.delete(`/admin/teachers/${id}`),
+
   // Indicators
   getIndicatorCategories: () => api.get('/admin/indicator-categories'),
   getIndicators: (categoryId?: number) => api.get('/admin/indicators', { params: { category_id: categoryId } }),
   createIndicator: (data: any) => api.post('/admin/indicators', data),
+  updateIndicator: (id: number, data: any) => api.put(`/admin/indicators/${id}`, data),
+  deleteIndicator: (id: number) => api.delete(`/admin/indicators/${id}`),
+  createIndicatorCategory: (data: any) => api.post('/admin/indicator-categories', data),
 }
 
 // Teacher API
@@ -91,6 +112,9 @@ export const teacherApi = {
 
 // Student API
 export const studentApi = {
+  // 学生综合查询（通过学号和姓名查询所有数据）
+  query: (studentNo: string, name: string) =>
+    api.post('/student/query', { student_no: studentNo, name }),
   simpleLogin: (studentNo: string, name: string) =>
     api.post('/student/simple-login', { student_no: studentNo, name }),
   getEvaluations: (studentId: number, semesterId?: number) =>

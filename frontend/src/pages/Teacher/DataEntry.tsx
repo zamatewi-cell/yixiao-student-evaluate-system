@@ -14,22 +14,25 @@ import {
     Divider,
     Typography,
     Tag,
-    Popconfirm
+    Popconfirm,
+    Alert
 } from 'antd'
 import {
     SaveOutlined,
     ReloadOutlined,
     CheckCircleOutlined,
-    CloseCircleOutlined
+    CloseCircleOutlined,
+    LockOutlined
 } from '@ant-design/icons'
 import axios from 'axios'
 
-const { Option } = Select
+const { Option, OptGroup } = Select
 const { Title, Text } = Typography
 
 interface Class {
     id: number
     name: string
+    grade_id: number
     grade_name: string
     student_count: number
 }
@@ -80,40 +83,117 @@ const DataEntry: React.FC = () => {
     // 表格数据
     const [tableData, setTableData] = useState<EvaluationDataRow[]>([])
 
-    // 获取我的班级
+    // 编辑权限状态
+    const [canEdit, setCanEdit] = useState<boolean>(false)
+    const [permissionLoaded, setPermissionLoaded] = useState<boolean>(false)
+
+    // 检查编辑权限
+    const checkEditPermission = async () => {
+        try {
+            const token = localStorage.getItem('token')
+
+            // 首先检查用户角色，管理员直接拥有权限
+            const authStorage = localStorage.getItem('auth-storage')
+            if (authStorage) {
+                const authData = JSON.parse(authStorage)
+                if (authData.state?.user?.role === 'admin') {
+                    setCanEdit(true)
+                    setPermissionLoaded(true)
+                    return
+                }
+            }
+
+            // 教师需要检查权限
+            const response = await axios.get('/api/teacher/edit-permission', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setCanEdit(response.data.can_edit)
+            if (!response.data.can_edit) {
+                message.warning(response.data.message)
+            }
+        } catch (error: any) {
+            // 出错时检查本地存储的角色
+            const authStorage = localStorage.getItem('auth-storage')
+            if (authStorage) {
+                const authData = JSON.parse(authStorage)
+                if (authData.state?.user?.role === 'admin') {
+                    setCanEdit(true)
+                    setPermissionLoaded(true)
+                    return
+                }
+            }
+            message.error('检查编辑权限失败')
+        } finally {
+            setPermissionLoaded(true)
+        }
+    }
+
+    // 获取我的班级（优先使用教师接口，如果返回空则试用管理员接口）
     const fetchMyClasses = async () => {
         try {
             const token = localStorage.getItem('token')
-            const response = await axios.get('/api/teacher/my-classes', {
+            // 先尝试教师接口
+            let response = await axios.get('/api/teacher/my-classes', {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            setMyClasses(response.data.data)
+            let classData = response.data.data || []
+
+            // 如果教师接口返回空，尝试管理员接口（管理员可能也需要使用此功能）
+            if (classData.length === 0) {
+                try {
+                    response = await axios.get('/api/admin/classes', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    })
+                    classData = response.data.data || []
+                } catch {
+                    // 管理员接口也失败则忽略
+                }
+            }
+
+            setMyClasses(classData)
         } catch (error: any) {
-            message.error('获取班级列表失败: ' + (error.response?.data?.detail || error.message))
+            // 教师接口失败，尝试管理员接口
+            try {
+                const token = localStorage.getItem('token')
+                const response = await axios.get('/api/admin/classes', {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+                setMyClasses(response.data.data || [])
+            } catch {
+                message.error('获取班级列表失败: ' + (error.response?.data?.detail || error.message))
+            }
         }
     }
 
-    // 获取学期列表
+    // 获取学期列表（使用教师接口）
     const fetchSemesters = async () => {
         try {
             const token = localStorage.getItem('token')
-            const response = await axios.get('/api/teacher/current-semester', {
+            // 使用教师接口获取学期列表
+            const response = await axios.get('/api/teacher/semesters', {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            if (response.data.data) {
-                setSemesters([response.data.data])
-                setSelectedSemester(response.data.data.id)
+            const semesterList = response.data.data || []
+            setSemesters(semesterList)
+
+            // 自动选中当前学期（如果有的话）
+            const currentSemester = semesterList.find((s: Semester) => s.is_current)
+            if (currentSemester) {
+                setSelectedSemester(currentSemester.id)
+            } else if (semesterList.length > 0) {
+                // 如果没有当前学期，选择第一个
+                setSelectedSemester(semesterList[0].id)
             }
         } catch (error: any) {
-            message.error('获取学期信息失败: ' + (error.response?.data?.detail || error.message))
+            message.error('获取学期列表失败: ' + (error.response?.data?.detail || error.message))
         }
     }
 
-    // 获取评价指标
+    // 获取评价指标（使用教师接口）
     const fetchIndicators = async () => {
         try {
             const token = localStorage.getItem('token')
-            const response = await axios.get('/api/admin/indicators', {
+            const response = await axios.get('/api/teacher/indicators', {
                 headers: { Authorization: `Bearer ${token}` }
             })
             setIndicators(response.data.data)
@@ -147,6 +227,7 @@ const DataEntry: React.FC = () => {
 
     // 初始化数据
     useEffect(() => {
+        checkEditPermission()
         fetchMyClasses()
         fetchSemesters()
         fetchIndicators()
@@ -375,6 +456,12 @@ const DataEntry: React.FC = () => {
                 title={
                     <Space>
                         <Title level={4} style={{ margin: 0 }}>数据录入</Title>
+                        {permissionLoaded && !canEdit && (
+                            <Tag color="warning" icon={<LockOutlined />}>无编辑权限</Tag>
+                        )}
+                        {permissionLoaded && canEdit && (
+                            <Tag color="success" icon={<CheckCircleOutlined />}>已授权</Tag>
+                        )}
                     </Space>
                 }
                 extra={
@@ -398,12 +485,29 @@ const DataEntry: React.FC = () => {
                                     placeholder="请选择班级"
                                     value={selectedClass}
                                     onChange={setSelectedClass}
+                                    showSearch
+                                    optionFilterProp="children"
+                                    notFoundContent="暂无可用班级"
                                 >
-                                    {myClasses.map(cls => (
-                                        <Option key={cls.id} value={cls.id}>
-                                            {cls.grade_name} {cls.name}（{cls.student_count}人）
-                                        </Option>
-                                    ))}
+                                    {myClasses && myClasses.length > 0 ? (
+                                        // 按年级分组显示班级
+                                        Object.entries(
+                                            myClasses.reduce((groups: { [key: string]: typeof myClasses }, cls) => {
+                                                const gradeName = cls.grade_name || '未分配年级'
+                                                if (!groups[gradeName]) groups[gradeName] = []
+                                                groups[gradeName].push(cls)
+                                                return groups
+                                            }, {})
+                                        ).sort(([a], [b]) => a.localeCompare(b, 'zh-CN')).map(([gradeName, classList]) => (
+                                            <OptGroup key={gradeName} label={gradeName}>
+                                                {classList.map(cls => (
+                                                    <Option key={cls.id} value={cls.id}>
+                                                        {cls.name}（{cls.student_count || 0}人）
+                                                    </Option>
+                                                ))}
+                                            </OptGroup>
+                                        ))
+                                    ) : null}
                                 </Select>
                             </Form.Item>
                         </Col>
@@ -445,6 +549,18 @@ const DataEntry: React.FC = () => {
 
                 <Divider />
 
+                {/* 权限提示 */}
+                {permissionLoaded && !canEdit && (
+                    <Alert
+                        message="您尚未获得数据编辑权限"
+                        description="请联系管理员授权后才能进行数据录入操作。您可以查看数据，但无法提交。"
+                        type="warning"
+                        showIcon
+                        icon={<LockOutlined />}
+                        style={{ marginBottom: 16 }}
+                    />
+                )}
+
                 {/* 操作按钮 */}
                 <Space style={{ marginBottom: 16 }}>
                     <Button
@@ -452,7 +568,7 @@ const DataEntry: React.FC = () => {
                         icon={<SaveOutlined />}
                         onClick={handleBatchSubmit}
                         loading={submitting}
-                        disabled={!selectedClass || !selectedSemester || !selectedIndicator}
+                        disabled={!canEdit || !selectedClass || !selectedSemester || !selectedIndicator}
                     >
                         批量提交
                     </Button>

@@ -53,8 +53,8 @@ const StudentQuery: React.FC = () => {
   const onFinish = async (values: { student_no: string; name: string }) => {
     setLoading(true);
     try {
-      // Query student info
-      const res = await api.post('/api/student/query', values);
+      // Query student info - 使用正确的路径（api实例已配置baseURL为/api）
+      const res = await api.post('/student/query', values);
       if (res.data.success) {
         setStudentInfo(res.data.student);
         setEvaluations(res.data.evaluations || []);
@@ -82,9 +82,18 @@ const StudentQuery: React.FC = () => {
     setCalligraphyRecords([]);
   };
 
+  // 获取性别显示文本
+  const getGenderText = (gender: string | null | undefined): string => {
+    if (!gender) return '未知';
+    const g = gender.toLowerCase();
+    if (g === 'm' || g === 'male' || g === '男') return '男';
+    if (g === 'f' || g === 'female' || g === '女') return '女';
+    return '未知';
+  };
+
   const getRadarOption = () => {
-    if (!radarData) return {};
-    
+    if (!radarData || radarData.categories.length < 3) return null;
+
     const indicators = radarData.categories.map((cat, idx) => ({
       name: cat,
       max: radarData.max_values[idx] || 100
@@ -93,44 +102,93 @@ const StudentQuery: React.FC = () => {
     return {
       title: {
         text: '综合素质评价雷达图',
-        left: 'center'
+        left: 'center',
+        textStyle: {
+          fontSize: 18,
+          fontWeight: 600,
+          color: '#333'
+        }
       },
       tooltip: {
-        trigger: 'item'
+        trigger: 'item',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#e5e5e5',
+        borderWidth: 1,
+        textStyle: { color: '#333' },
+        formatter: (params: any) => {
+          const { name, value } = params;
+          let result = `<strong>${name}</strong><br/>`;
+          radarData.categories.forEach((cat, idx) => {
+            result += `${cat}: <strong>${value[idx]}</strong> / ${radarData.max_values[idx] || 100}<br/>`;
+          });
+          return result;
+        }
       },
       radar: {
         indicator: indicators,
         shape: 'polygon',
         splitNumber: 5,
+        center: ['50%', '55%'],
+        radius: '65%',
         axisName: {
-          color: '#333'
+          color: '#5470c6',
+          fontSize: 13,
+          fontWeight: 500
+        },
+        axisLine: {
+          lineStyle: {
+            color: 'rgba(84, 112, 198, 0.3)'
+          }
         },
         splitLine: {
           lineStyle: {
-            color: ['#e5e5e5']
+            color: 'rgba(84, 112, 198, 0.2)',
+            width: 1
           }
         },
         splitArea: {
           show: true,
           areaStyle: {
-            color: ['rgba(24, 144, 255, 0.1)', 'rgba(24, 144, 255, 0.2)']
+            color: [
+              'rgba(84, 112, 198, 0.02)',
+              'rgba(84, 112, 198, 0.06)',
+              'rgba(84, 112, 198, 0.10)',
+              'rgba(84, 112, 198, 0.14)',
+              'rgba(84, 112, 198, 0.18)'
+            ]
           }
         }
       },
       series: [{
         type: 'radar',
+        symbol: 'circle',
+        symbolSize: 8,
+        animation: true,
+        animationDuration: 1000,
+        animationEasing: 'elasticOut',
         data: [{
           value: radarData.values,
           name: studentInfo?.name || '评价数据',
           areaStyle: {
-            color: 'rgba(24, 144, 255, 0.4)'
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(84, 112, 198, 0.6)' },
+                { offset: 1, color: 'rgba(145, 204, 117, 0.6)' }
+              ]
+            }
           },
           lineStyle: {
-            color: '#1890ff',
-            width: 2
+            color: '#5470c6',
+            width: 2,
+            shadowColor: 'rgba(84, 112, 198, 0.5)',
+            shadowBlur: 10
           },
           itemStyle: {
-            color: '#1890ff'
+            color: '#5470c6',
+            borderColor: '#fff',
+            borderWidth: 2
           }
         }]
       }]
@@ -223,8 +281,17 @@ const StudentQuery: React.FC = () => {
           雷达图
         </span>
       ),
-      children: radarData ? (
-        <ReactECharts option={getRadarOption()} style={{ height: 400 }} />
+      children: radarData && radarData.categories.length >= 3 ? (
+        <ReactECharts option={getRadarOption()} style={{ height: 450 }} />
+      ) : radarData && radarData.categories.length > 0 ? (
+        <Empty
+          description={
+            <span>
+              当前仅有 <strong>{radarData.categories.length}</strong> 个评价维度数据<br />
+              雷达图需要至少3个维度才能正常显示
+            </span>
+          }
+        />
       ) : (
         <Empty description="暂无雷达图数据" />
       )
@@ -286,8 +353,8 @@ const StudentQuery: React.FC = () => {
   ];
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       padding: '40px 20px'
     }}>
@@ -297,7 +364,7 @@ const StudentQuery: React.FC = () => {
             <UserOutlined style={{ marginRight: 8 }} />
             学生综合素质评价查询
           </h1>
-          
+
           <Form
             layout="inline"
             onFinish={onFinish}
@@ -337,7 +404,7 @@ const StudentQuery: React.FC = () => {
               <Descriptions title="学生信息" bordered>
                 <Descriptions.Item label="学号">{studentInfo.student_no}</Descriptions.Item>
                 <Descriptions.Item label="姓名">{studentInfo.name}</Descriptions.Item>
-                <Descriptions.Item label="性别">{studentInfo.gender === 'M' ? '男' : '女'}</Descriptions.Item>
+                <Descriptions.Item label="性别">{getGenderText(studentInfo.gender)}</Descriptions.Item>
                 <Descriptions.Item label="年级">{studentInfo.grade_name}</Descriptions.Item>
                 <Descriptions.Item label="班级">{studentInfo.class_name}</Descriptions.Item>
               </Descriptions>
